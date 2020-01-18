@@ -1,0 +1,68 @@
+version: "2"
+services:
+  postgres:
+    image: "postgres:latest"
+    container_name: skyview_postgres
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200M"
+
+      # ports:
+      # - "5432:5432/tcp"
+    environment:
+      POSTGRES_DB: skyview
+      POSTGRES_PASSWORD: ""
+      POSTGRES_USER: skyview
+    volumes:
+      - "./data:/var/lib/postgresql/data"
+  server:
+    image: skyview-server:latest
+    container_name: skyview_server
+    tty: true
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200M"
+    depends_on:
+      - postgres
+    # volumes:
+      # - "./server:/web"
+        # command: "tail -f /dev/null"
+  nginx:
+    image: skyview-nginx:latest
+    container_name: skyview_nginx
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200M"
+    volumes:
+      - "./logs/nginx:/var/log/nginx"
+      - "./ca:/etc/nginx/ssl/"
+      - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
+      - "./nginx/skyview-server.conf:/etc/nginx/sites-enabled/skyview-server.conf"
+      # - "./dist/app:/dist"
+    command: ["nginx", "-g", "daemon off;"]
+    depends_on:
+      - server
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+  seaweedfs:
+    image: seaweedfs:1.44
+    restart: always
+    container_name: skyview_seaweedfs
+#    ports:
+#      - "9333:9333/tcp"
+#      - "19333:19333/tcp"
+#      - "8081:8081/tcp"
+#      - "18080:18080/tcp"
+#      - "8888:8888/tcp"
+#      - "18888:18888/tcp"
+    volumes:
+      - "./static:/data"
+      - "./downloads:/downloads"
+    command: "python3 /start.py"
